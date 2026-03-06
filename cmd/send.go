@@ -19,7 +19,7 @@ func newSendCmd(flags *rootFlags) *cobra.Command {
 }
 
 func newSendTextCmd(flags *rootFlags) *cobra.Command {
-	return &cobra.Command{
+	cmd := &cobra.Command{
 		Use:   "text <chat> <message>",
 		Short: "Send a text message",
 		Args:  cobra.ExactArgs(2),
@@ -52,6 +52,7 @@ func newSendTextCmd(flags *rootFlags) *cobra.Command {
 			})
 		},
 	}
+	return cmd
 }
 
 func newSendFileCmd(flags *rootFlags) *cobra.Command {
