@@ -1,0 +1,27 @@
+# Binary
+tgcli
+dist/
+
+# SQLite
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Session & credentials
+session.json
+.env
+
+# OS
+.DS_Store
+
+# Editor
+*.swp
+*.swo
+*~
+
+# Export artifacts
+tdl-export.json
+
+# Claude Code
+CLAUDE.md
