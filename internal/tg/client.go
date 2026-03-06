@@ -115,50 +115,16 @@ func (c *Client) Login(ctx context.Context, opts LoginOptions) error {
 			return fmt.Errorf("phone number is required")
 		}
 
-		providedCode := opts.Code
-		codePrompt := func(ctx context.Context, sentCode *tg.AuthSentCode) (string, error) {
-			if providedCode != "" {
-				code := providedCode
-				providedCode = "" // only use once
-				return code, nil
-			}
-			fmt.Print("Verification code: ")
-			code, err := reader.ReadString('\n')
-			if err != nil {
-				return "", fmt.Errorf("read code: %w", err)
-			}
-			return strings.TrimSpace(code), nil
+		a := &interactiveAuth{
+			phone:    phone,
+			code:     opts.Code,
+			password: opts.Password,
+			reader:   reader,
 		}
 
-		password := opts.Password
-
-		// Try without 2FA first, fall back to password if needed.
-		flow := auth.NewFlow(
-			auth.Constant(phone, password, auth.CodeAuthenticatorFunc(codePrompt)),
-			auth.SendCodeOptions{},
-		)
-
+		flow := auth.NewFlow(a, auth.SendCodeOptions{})
 		if err := flow.Run(ctx, c.client.Auth()); err != nil {
-			// If the error indicates 2FA is needed, prompt for password.
-			if password == "" && strings.Contains(err.Error(), "PASSWORD_HASH_INVALID") || strings.Contains(err.Error(), "SRP") {
-				fmt.Print("2FA password: ")
-				pwBytes, pwErr := term.ReadPassword(int(os.Stdin.Fd()))
-				fmt.Println()
-				if pwErr != nil {
-					return fmt.Errorf("read 2FA password: %w", pwErr)
-				}
-				password = strings.TrimSpace(string(pwBytes))
-
-				flow2 := auth.NewFlow(
-					auth.Constant(phone, password, auth.CodeAuthenticatorFunc(codePrompt)),
-					auth.SendCodeOptions{},
-				)
-				if err := flow2.Run(ctx, c.client.Auth()); err != nil {
-					return fmt.Errorf("auth with 2FA: %w", err)
-				}
-			} else {
-				return fmt.Errorf("auth: %w", err)
-			}
+			return fmt.Errorf("auth: %w", err)
 		}
 
 		self, err := c.client.Self(ctx)
@@ -170,6 +136,54 @@ func (c *Client) Login(ctx context.Context, opts LoginOptions) error {
 		fmt.Printf("Logged in as %s %s (ID: %d)\n", self.FirstName, self.LastName, self.ID)
 		return nil
 	})
+}
+
+// interactiveAuth implements auth.UserAuthenticator with interactive prompts.
+// Pre-provided values (from flags) are used first; if empty, prompts stdin.
+type interactiveAuth struct {
+	phone    string
+	code     string
+	password string
+	reader   *bufio.Reader
+}
+
+func (a *interactiveAuth) Phone(_ context.Context) (string, error) {
+	return a.phone, nil
+}
+
+func (a *interactiveAuth) Code(_ context.Context, _ *tg.AuthSentCode) (string, error) {
+	if a.code != "" {
+		code := a.code
+		a.code = "" // only use once
+		return code, nil
+	}
+	fmt.Print("Verification code (check Telegram): ")
+	code, err := a.reader.ReadString('\n')
+	if err != nil {
+		return "", fmt.Errorf("read code: %w", err)
+	}
+	return strings.TrimSpace(code), nil
+}
+
+func (a *interactiveAuth) Password(_ context.Context) (string, error) {
+	if a.password != "" {
+		return a.password, nil
+	}
+	fmt.Print("2FA password: ")
+	pwBytes, err := term.ReadPassword(int(os.Stdin.Fd()))
+	fmt.Println()
+	if err != nil {
+		return "", fmt.Errorf("read 2FA password: %w", err)
+	}
+	return strings.TrimSpace(string(pwBytes)), nil
+}
+
+func (a *interactiveAuth) AcceptTermsOfService(_ context.Context, _ tg.HelpTermsOfService) error {
+	return nil
+}
+
+func (a *interactiveAuth) SignUp(_ context.Context) (auth.UserInfo, error) {
+	return auth.UserInfo{}, fmt.Errorf("sign up not supported; use an existing Telegram account")
 }
 
 func (c *Client) SelfID() int64              { return c.selfID }

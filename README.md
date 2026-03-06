@@ -78,13 +78,27 @@ export TGCLI_APP_HASH=your_api_hash
 
 > **Tip:** Add these to `~/.zshrc` or `~/.bashrc` so they persist.
 
-Then authenticate:
+Then log in:
 
 ```bash
 tgcli login
 ```
 
-You'll receive a verification code in Telegram. If you have 2FA enabled, you'll also be prompted for your password. The session persists — you only need to do this once.
+The login flow is interactive and guides you step by step:
+
+1. **Phone number** — Enter your number with country code (e.g. `+56912345678`)
+2. **Verification code** — Telegram sends a code to your app (or via SMS). Enter it when prompted
+3. **2FA password** — Only if you have two-factor authentication enabled
+
+```
+$ tgcli login
+Phone number (with country code, e.g. +56...): +56912345678
+Verification code (check Telegram): 12345
+2FA password: ********
+Logged in as John Doe (ID: 123456789)
+```
+
+The session persists in `~/.tgcli/session.json` — you only need to do this once.
 
 ## Commands
 
@@ -188,11 +202,17 @@ All data lives in `~/.tgcli/` (configurable with `--store`):
 
 ## Non-interactive login
 
-For CI/CD or scripting, pass credentials as flags:
+For CI/CD or scripting, you can pass each credential as a flag. Flags and interactive prompts can be mixed — any flag you provide skips its corresponding prompt:
 
 ```bash
+# Provide phone upfront, enter code interactively
+tgcli login --phone "+1234567890"
+
+# Fully non-interactive (e.g. for scripts)
 tgcli login --phone "+1234567890" --code "12345" --password "your2fa"
 ```
+
+> **Note:** The `--code` flag requires you to have already triggered a code (e.g. from a prior `tgcli login` attempt). For most users, the interactive flow is simpler.
 
 ## Tech stack
 
