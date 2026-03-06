@@ -186,6 +186,31 @@ func (a *interactiveAuth) SignUp(_ context.Context) (auth.UserInfo, error) {
 	return auth.UserInfo{}, fmt.Errorf("sign up not supported; use an existing Telegram account")
 }
 
+// Logout terminates the current session on Telegram's servers and removes local session file.
+func (c *Client) Logout(ctx context.Context) error {
+	return c.client.Run(ctx, func(ctx context.Context) error {
+		c.api = c.client.API()
+
+		status, err := c.client.Auth().Status(ctx)
+		if err != nil {
+			return fmt.Errorf("check auth status: %w", err)
+		}
+		if !status.Authorized {
+			return fmt.Errorf("not logged in")
+		}
+
+		if _, err := c.api.AuthLogOut(ctx); err != nil {
+			return fmt.Errorf("logout: %w", err)
+		}
+
+		// Remove local session file.
+		sessionPath := filepath.Join(c.dir, "session.json")
+		os.Remove(sessionPath)
+
+		return nil
+	})
+}
+
 func (c *Client) SelfID() int64              { return c.selfID }
 func (c *Client) API() *tg.Client            { return c.api }
 func (c *Client) Sender() *message.Sender    { return c.sender }

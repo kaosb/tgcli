@@ -102,6 +102,12 @@ The session persists in `~/.tgcli/session.json` — you only need to do this onc
 
 ## Commands
 
+### Logout
+
+```bash
+tgcli logout                                # End session and remove local credentials
+```
+
 ### Send messages
 
 ```bash

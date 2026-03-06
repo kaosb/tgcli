@@ -72,6 +72,10 @@ func (a *App) Login(ctx context.Context, phone, code, password string) error {
 	})
 }
 
+func (a *App) Logout(ctx context.Context) error {
+	return a.tg.Logout(ctx)
+}
+
 // SendText sends a text message to the given chat.
 func (a *App) SendText(ctx context.Context, chatArg, message string) error {
 	peer, err := a.tg.ResolvePeer(ctx, chatArg)

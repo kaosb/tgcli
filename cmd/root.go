@@ -37,6 +37,7 @@ func Execute(args []string) error {
 	rootCmd.PersistentFlags().DurationVar(&flags.timeout, "timeout", 5*time.Minute, "command timeout")
 
 	rootCmd.AddCommand(newLoginCmd(&flags))
+	rootCmd.AddCommand(newLogoutCmd(&flags))
 	rootCmd.AddCommand(newSendCmd(&flags))
 	rootCmd.AddCommand(newChatCmd(&flags))
 	rootCmd.AddCommand(newMsgCmd(&flags))
