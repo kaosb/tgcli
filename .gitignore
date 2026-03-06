@@ -9,6 +9,7 @@ dist/
 *.db-shm
 
 # Session & credentials
+config.json
 session.json
 .env
 

@@ -27,14 +27,10 @@ Inspired by [wacli](https://github.com/steipete/wacli) (WhatsApp CLI).
 # 1. Install
 go install github.com/kaosb/tgcli@latest
 
-# 2. Set your API credentials (get them at https://my.telegram.org/apps)
-export TGCLI_APP_ID=12345678
-export TGCLI_APP_HASH=your_api_hash
-
-# 3. Login (once)
+# 2. Login (once — you'll be prompted for API credentials and phone)
 tgcli login
 
-# 4. Use it
+# 3. Use it
 tgcli chat ls
 tgcli send text @username "Hello from the terminal!"
 tgcli msg search "meeting notes"
@@ -56,6 +52,13 @@ make build
 CGO_ENABLED=1 go install github.com/kaosb/tgcli@latest
 ```
 
+Make sure `$GOPATH/bin` is in your `PATH`:
+
+```bash
+# Add to ~/.zshrc or ~/.bashrc
+export PATH="$HOME/go/bin:$PATH"
+```
+
 ### From releases
 
 Download the latest binary from [GitHub Releases](https://github.com/kaosb/tgcli/releases).
@@ -64,41 +67,36 @@ Download the latest binary from [GitHub Releases](https://github.com/kaosb/tgcli
 
 ## Setup
 
-tgcli needs a Telegram API application. This takes 30 seconds:
+tgcli needs a Telegram API application. Create one at [my.telegram.org/apps](https://my.telegram.org/apps) (any name works) — you'll need the `api_id` and `api_hash`.
 
-1. Open [my.telegram.org/apps](https://my.telegram.org/apps) and log in
-2. Create an application (any name works)
-3. Copy your `api_id` and `api_hash`
-4. Set them as environment variables:
-
-```bash
-export TGCLI_APP_ID=12345678
-export TGCLI_APP_HASH=your_api_hash
-```
-
-> **Tip:** Add these to `~/.zshrc` or `~/.bashrc` so they persist.
-
-Then log in:
+Then just run:
 
 ```bash
 tgcli login
 ```
 
-The login flow is interactive and guides you step by step:
+The login flow is fully interactive and guides you through each step:
 
-1. **Phone number** — Enter your number with country code (e.g. `+56912345678`)
-2. **Verification code** — Telegram sends a code to your app (or via SMS). Enter it when prompted
-3. **2FA password** — Only if you have two-factor authentication enabled
+1. **API credentials** — Enter your `app_id` and `app_hash` (saved automatically for next time)
+2. **Phone number** — Your number with country code (e.g. `+56912345678`)
+3. **Verification code** — Telegram sends a code to your app (or via SMS)
+4. **2FA password** — Only if you have two-factor authentication enabled
 
 ```
 $ tgcli login
+Telegram API credentials required (get them at https://my.telegram.org/apps)
+App ID: 12345678
+App Hash: your_api_hash
+Credentials saved to /Users/you/.tgcli/config.json
 Phone number (with country code, e.g. +56...): +56912345678
 Verification code (check Telegram): 12345
 2FA password: ********
 Logged in as John Doe (ID: 123456789)
 ```
 
-The session persists in `~/.tgcli/session.json` — you only need to do this once.
+The session persists — you only need to do this once. Credentials are stored in `~/.tgcli/config.json` and the session in `~/.tgcli/session.json`.
+
+> **Alternative:** You can also set credentials via environment variables `TGCLI_APP_ID` and `TGCLI_APP_HASH` (these take priority over the config file).
 
 ## Commands
 
@@ -203,6 +201,7 @@ All data lives in `~/.tgcli/` (configurable with `--store`):
 
 | File | What it is |
 |---|---|
+| `config.json` | API credentials (`app_id`, `app_hash`) — **keep this private** |
 | `session.json` | MTProto session — **keep this private** |
 | `tgcli.db` | Local message cache + FTS5 search index |
 

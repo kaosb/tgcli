@@ -3,6 +3,7 @@ package tg
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -31,7 +32,7 @@ type Options struct {
 }
 
 func New(opts Options) (*Client, error) {
-	appID, appHash, err := loadCredentials()
+	appID, appHash, err := loadCredentials(opts.StoreDir)
 	if err != nil {
 		return nil, err
 	}
@@ -287,17 +288,67 @@ func (c *Client) ResolvePeer(ctx context.Context, chatArg string) (tg.InputPeerC
 	return nil, fmt.Errorf("could not resolve %q to a peer", chatArg)
 }
 
-func loadCredentials() (int, string, error) {
+type config struct {
+	AppID   int    `json:"app_id"`
+	AppHash string `json:"app_hash"`
+}
+
+// loadCredentials tries (in order): environment variables, config file, interactive prompt.
+func loadCredentials(storeDir string) (int, string, error) {
+	// 1. Environment variables (highest priority).
 	appIDStr := os.Getenv("TGCLI_APP_ID")
 	appHash := os.Getenv("TGCLI_APP_HASH")
-
-	if appIDStr == "" || appHash == "" {
-		return 0, "", fmt.Errorf("TGCLI_APP_ID and TGCLI_APP_HASH environment variables are required\nGet them from https://my.telegram.org/apps")
+	if appIDStr != "" && appHash != "" {
+		appID, err := strconv.Atoi(appIDStr)
+		if err != nil {
+			return 0, "", fmt.Errorf("TGCLI_APP_ID must be a number: %w", err)
+		}
+		return appID, appHash, nil
 	}
 
-	appID, err := strconv.Atoi(appIDStr)
+	// 2. Config file.
+	configPath := filepath.Join(storeDir, "config.json")
+	if data, err := os.ReadFile(configPath); err == nil {
+		var cfg config
+		if err := json.Unmarshal(data, &cfg); err == nil && cfg.AppID > 0 && cfg.AppHash != "" {
+			return cfg.AppID, cfg.AppHash, nil
+		}
+	}
+
+	// 3. Interactive prompt.
+	fmt.Println("Telegram API credentials required (get them at https://my.telegram.org/apps)")
+	reader := bufio.NewReader(os.Stdin)
+
+	fmt.Print("App ID: ")
+	idLine, err := reader.ReadString('\n')
 	if err != nil {
-		return 0, "", fmt.Errorf("TGCLI_APP_ID must be a number: %w", err)
+		return 0, "", fmt.Errorf("read app id: %w", err)
+	}
+	appID, err := strconv.Atoi(strings.TrimSpace(idLine))
+	if err != nil {
+		return 0, "", fmt.Errorf("app id must be a number: %w", err)
+	}
+
+	fmt.Print("App Hash: ")
+	hashLine, err := reader.ReadString('\n')
+	if err != nil {
+		return 0, "", fmt.Errorf("read app hash: %w", err)
+	}
+	appHash = strings.TrimSpace(hashLine)
+	if appHash == "" {
+		return 0, "", fmt.Errorf("app hash is required")
+	}
+
+	// Save for next time.
+	if err := os.MkdirAll(storeDir, 0700); err != nil {
+		return 0, "", fmt.Errorf("create store dir: %w", err)
+	}
+	cfg := config{AppID: appID, AppHash: appHash}
+	data, _ := json.MarshalIndent(cfg, "", "  ")
+	if err := os.WriteFile(configPath, data, 0600); err != nil {
+		fmt.Fprintf(os.Stderr, "warning: could not save config: %v\n", err)
+	} else {
+		fmt.Printf("Credentials saved to %s\n", configPath)
 	}
 
 	return appID, appHash, nil
