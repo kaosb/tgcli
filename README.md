@@ -25,7 +25,7 @@ Inspired by [wacli](https://github.com/steipete/wacli) (WhatsApp CLI).
 
 ```bash
 # 1. Install
-go install github.com/kaosb/tgcli@latest
+CGO_ENABLED=1 go install github.com/kaosb/tgcli@latest
 
 # 2. Login (once — you'll be prompted for API credentials and phone)
 tgcli login
@@ -103,7 +103,7 @@ The session persists — you only need to do this once. Credentials are stored i
 ### Logout
 
 ```bash
-tgcli logout                                # End session and remove local credentials
+tgcli logout                                # End session and remove local session
 ```
 
 ### Send messages
